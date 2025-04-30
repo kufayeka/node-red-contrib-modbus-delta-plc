@@ -1,0 +1,232 @@
+<script type="text/x-red" data-template-name="DELTA-READ">
+    <div class="form-row">
+      <label for="node-input-name">Name </label>
+      <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+      <label for="node-input-plcModel"><i class="fa fa-server"></i> PLC Model </label>
+      <select id="node-input-plcModel">
+        <option value="ES-EC">DVP - ES&ES2/EC/EX/SS/SA/SX/EH2&3/SV2</option>
+        <option value="ES3">DVP - ES3/EX3/SV3/SX3</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="node-input-stationId"><i class="fa fa-sign-in"></i> Station ID </label>
+      <input type="number" id="node-input-stationId" min="0" placeholder="e.g. 1">
+    </div>
+    <div class="form-row">
+      <label for="node-input-device"><i class="fa fa-cubes"></i> Device </label>
+      <select id="node-input-device">
+        <option value="X">X (Input status)</option>
+        <option value="Y">Y (Coil status)</option>
+        <option value="M">M (Internal relay)</option>
+        <option value="D16">D (16-bit register)</option>
+        <option value="D32">D (32-bit register)</option>
+        <option value="T">T (Timer)</option>
+        <option value="C16">C (16-bit counter)</option>
+        <option value="C32">C (32-bit counter)</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="node-input-start" id="startAddressLabel">Start Address </label>
+      <b><span id="node-input-startDevicePrefix" class="devicePrefix">Y</span><b>
+      <input type="text" id="node-input-start"/>
+    </div>
+    <div class="form-row">
+      <label for="node-input-end" id="endAddressLabel">End Address </label>
+      <b><span id="node-input-endDevicePrefix" class="devicePrefix">Y</span><b>
+      <input type="text" id="node-input-end"/>
+    </div>
+    <div class="form-row">
+      <label for="node-input-baseOffset"><i class="fa fa-sliders"></i> Base Address Offset </label>
+      <select id="node-input-baseOffset">
+        <option value="-1">–1</option>
+        <option value="0" selected>0</option>
+        <option value="1">+1</option>
+      </select>
+    </div>
+
+    <div class="divider"></div>
+    <div class="form-row branded">
+        <p>Created by: <strong>@kufayeka</strong></p>
+    </div>
+
+    <style>
+        /* divider */
+        .divider {
+            border-top: 1px solid #ccc;
+            margin: 12px 0;
+        }
+        /* branding box */
+        .branded {
+            background: #2575fc;
+            text-align: center;
+            padding: 6px 0;
+            border-radius: 4px;
+        }
+        .branded p {
+            margin: 0;
+            color: white;
+            font-size: 0.9em;
+            font-family: Arial, sans-serif;
+        }
+        .devicePrefix { border: 1px solid #ccc; padding: 5px; border-radius: 2px; }
+    </style>
+</script>
+
+<script type="text/x-red" data-help-name="DELTA-READ">
+    <p><b>DELTA-READ</b> untuk baca Modbus PLC Delta (DVP-ES…)</p>
+    <ul>
+      <li><b>Device</b>: X/Y/M/D16/D32/T/C16/C32</li>
+      <li><b>Start Address</b> & <b>End Address</b></li>
+      <li><b>Base Address Offset</b>: –1,0,+1 ditambahkan ke base device</li>
+      <li>Output <code>msg.payload</code> sbb:
+        <pre>{
+    value: msg.payload,
+    fc: <i>function code</i>,
+    unitid: 1,
+    address: base+start+offset,
+    quantity: end−start+1 (atau *2 untuk 32-bit)
+  }</pre>
+      </li>
+    </ul>
+</script>
+
+<script type="text/javascript">
+    RED.nodes.registerType('DELTA-READ', {
+        category: 'modbus',
+        color: '#4CAF50',
+        inputs: 1,
+        outputs: 1,
+        icon: 'font-awesome/fa-server',
+        align: 'right',
+        defaults: {
+            plcModel:  { value:"ES-EC"},
+            stationId:  { value:1},
+            name:       { value:"" },
+            device:     { value:"X" },
+            start:      { value:0 },
+            end:        { value:1 },
+            baseOffset: { value:-1 }
+        },
+        oneditprepare: function() {
+            const octalOnly = (val) => val.replace(/[^0-7]/g, '');
+            const decimalOnly = (val) => val.replace(/\D/g, '');
+
+            function updateInputFilter() {
+                const dev = $("#node-input-device").val();
+
+                switch (dev) {
+                    case "X":
+                        // hanya 0-7, label jadi Oct
+                        $("#node-input-start,#node-input-end")
+                            .off("input")
+                            .on("input", function() { this.value = octalOnly(this.value); })
+                            .attr("placeholder","e.g. 77")
+                            .attr("title","Octal only (0-7)");
+                        // ganti label
+                        $("#startAddressLabel")
+                            .html('Start Address (Oct) (1025) ');
+                        $("#endAddressLabel")
+                            .html('End Address (Oct) ');
+                        $("#node-input-startDevicePrefix,#node-input-endDevicePrefix").text("X");
+                        break;
+
+                    case "Y":
+                        // hanya 0-7, label jadi Oct
+                        $("#node-input-start,#node-input-end")
+                            .off("input")
+                            .on("input", function() { this.value = octalOnly(this.value); })
+                            .attr("placeholder","e.g. 77")
+                            .attr("title","Octal only (0-7)");
+                        // ganti label
+                        $("#startAddressLabel")
+                            .html('Start Address (Oct) (1281) ');
+                        $("#endAddressLabel")
+                            .html('End Address (Oct) ');
+                        $("#node-input-startDevicePrefix,#node-input-endDevicePrefix").text("Y");
+                        break;
+
+                    case "M":
+                        // 0-9, label jadi Dec
+                        $("#node-input-start,#node-input-end")
+                            .off("input")
+                            .on("input", function() { this.value = decimalOnly(this.value); })
+                            .attr("placeholder","e.g. 100")
+                            .attr("title","Decimal only (0-9)");
+                        $("#startAddressLabel")
+                            .html('Start Address (Dec) (2049) ');
+                        $("#endAddressLabel")
+                            .html('End Address (Dec) ');
+                        $("#node-input-startDevicePrefix,#node-input-endDevicePrefix").text("M");
+                        break;
+
+                    case "T":
+                        // 0-9, label jadi Dec
+                        $("#node-input-start,#node-input-end")
+                            .off("input")
+                            .on("input", function() { this.value = decimalOnly(this.value); })
+                            .attr("placeholder","e.g. 100")
+                            .attr("title","Decimal only (0-9)");
+                        $("#startAddressLabel")
+                            .html('Start Address (Dec) (1537) ');
+                        $("#endAddressLabel")
+                            .html('End Address (Dec) ');
+                        $("#node-input-startDevicePrefix,#node-input-endDevicePrefix").text("T");
+                        break;
+
+                    case "C16":
+                        // 0-9, label jadi Dec
+                        $("#node-input-start,#node-input-end")
+                            .off("input")
+                            .on("input", function() { this.value = decimalOnly(this.value); })
+                            .attr("placeholder","e.g. 100")
+                            .attr("title","Decimal only (0-9)");
+                        $("#startAddressLabel")
+                            .html('Start Address (Dec) (3585) ');
+                        $("#endAddressLabel")
+                            .html('End Address (Dec) ');
+                        $("#node-input-startDevicePrefix,#node-input-endDevicePrefix").text("C");
+                        break;
+
+                    case "C32":
+                        // 0-9, label jadi Dec
+                        $("#node-input-start,#node-input-end")
+                            .off("input")
+                            .on("input", function() { this.value = decimalOnly(this.value); })
+                            .attr("placeholder","e.g. 100")
+                            .attr("title","Decimal only (0-9)");
+                        $("#startAddressLabel")
+                            .html('Start Address (Dec) (1793) ');
+                        $("#endAddressLabel")
+                            .html('End Address (Dec) ');
+                        $("#node-input-startDevicePrefix,#node-input-endDevicePrefix").text("C");
+                        break;
+
+                    case "D16" || "D32":
+                        // 0-9, label jadi Dec
+                        $("#node-input-start,#node-input-end")
+                            .off("input")
+                            .on("input", function() { this.value = decimalOnly(this.value); })
+                            .attr("placeholder","e.g. 100")
+                            .attr("title","Decimal only (0-9)");
+                        $("#startAddressLabel")
+                            .html('Start Address (Dec) (4097) ');
+                        $("#endAddressLabel")
+                            .html('End Address (Dec) ');
+                        $("#node-input-startDevicePrefix,#node-input-endDevicePrefix").text("D");
+                        break;
+                }
+            }
+
+            // on load
+            updateInputFilter();
+
+            // when device changes
+            $("#node-input-device").on("change", updateInputFilter);
+        },
+        label: function() {
+            return this.name||"DELTA-READ";
+        }
+    });
+</script>

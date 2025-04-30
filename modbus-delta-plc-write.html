@@ -1,0 +1,161 @@
+<!-- File: DELTA-WRITE.html -->
+<script type="text/x-red" data-template-name="DELTA-WRITE">
+    <div class="form-row">
+      <label for="node-input-name">Name</label>
+      <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+      <label for="node-input-plcModel"><i class="fa fa-server"></i> PLC Model</label>
+      <select id="node-input-plcModel">
+        <option value="ES-EC">DVP-ES & ES2/EC/EX/SS/SA/SX/EH2&3/SV2</option>
+        <option value="ES3">DVP-ES3/EX3/SV3/SX3</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="node-input-stationId">Station ID</label>
+      <input type="number" id="node-input-stationId" min="0" placeholder="e.g. 1">
+    </div>
+    <div class="form-row">
+      <label for="node-input-device"><i class="fa fa-cubes"></i> Device</label>
+      <select id="node-input-device">
+        <option value="Y">Y (Coil status)</option>
+        <option value="M">M (Internal relay)</option>
+        <option value="D">D (16 & 32-bit register)</option>
+        <option value="T">T (Timer)</option>
+        <option value="C16">C16 (16-bit counter)</option>
+        <option value="C32">C32 (32-bit counter)</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="node-input-start" id="startAddressLabel">Start Address </label>
+      <b><span id="node-input-startType" class="devicePrefix">Y</span><b>
+      <input type="text" id="node-input-start"/>
+    </div>
+    <div class="form-row">
+      <label for="node-input-baseOffset"><i class="fa fa-sliders"></i> Base Address Offset</label>
+      <select id="node-input-baseOffset">
+        <option value="-1">–1</option>
+        <option value="0" selected>0</option>
+        <option value="1">+1</option>
+      </select>
+    </div>
+
+    <div class="divider"></div>
+    <div class="form-row branded">
+      <p>Created by: <strong>@kufayeka</strong></p>
+    </div>
+
+    <style>
+      .divider { border-top: 1px solid #ccc; margin: 12px 0; }
+      .branded { background: #2575fc; text-align: center; padding: 6px 0; border-radius: 4px; }
+      .branded p { margin: 0; color: white; font-size: 0.9em; font-family: Arial, sans-serif; }
+      .devicePrefix { border: 1px solid #ccc; padding: 5px; border-radius: 2px; }
+    </style>
+</script>
+
+<script type="text/javascript">
+    RED.nodes.registerType('DELTA-WRITE', {
+        category: 'modbus',
+        color: '#4CAF50',
+        inputs: 1, outputs: 1, icon: 'font-awesome/fa-server', align: 'right',
+        defaults: {
+            name:       { value:"" },
+            plcModel:   { value:"ES-EC" },
+            stationId:  { value:1 },
+            device:     { value:"Y" },
+            start:      { value:"0" },
+            end:        { value:"" },
+            baseOffset: { value:-1 }
+        },
+        oneditprepare: function() {
+            const octalOnly = (val) => val.replace(/[^0-7]/g, '');
+            const decimalOnly = (val) => val.replace(/\D/g, '');
+
+            function updateInputFilter() {
+                const dev = $("#node-input-device").val();
+
+                switch (dev) {
+                    case "Y":
+                        // hanya 0-7, label jadi Oct
+                        $("#node-input-start,#node-input-end")
+                            .off("input")
+                            .on("input", function() { this.value = octalOnly(this.value); })
+                            .attr("placeholder","e.g. 77")
+                            .attr("title","Octal only (0-7)");
+                        // ganti label
+                        $("#startAddressLabel")
+                            .html('Start Address (Oct) (1281) ');
+                        $("#node-input-startType").text("Y");
+                        break;
+
+                    case "M":
+                        // 0-9, label jadi Dec
+                        $("#node-input-start,#node-input-end")
+                            .off("input")
+                            .on("input", function() { this.value = decimalOnly(this.value); })
+                            .attr("placeholder","e.g. 100")
+                            .attr("title","Decimal only (0-9)");
+                        $("#startAddressLabel")
+                            .html('Start Address (Dec) (2049) ');
+                        $("#node-input-startType").text("M");
+                        break;
+
+                    case "T":
+                        // 0-9, label jadi Dec
+                        $("#node-input-start,#node-input-end")
+                            .off("input")
+                            .on("input", function() { this.value = decimalOnly(this.value); })
+                            .attr("placeholder","e.g. 100")
+                            .attr("title","Decimal only (0-9)");
+                        $("#startAddressLabel")
+                            .html('Start Address (Dec) (1537) ');
+                        $("#node-input-startType").text("T");
+                        break;
+
+                    case "C16":
+                        // 0-9, label jadi Dec
+                        $("#node-input-start,#node-input-end")
+                            .off("input")
+                            .on("input", function() { this.value = decimalOnly(this.value); })
+                            .attr("placeholder","e.g. 100")
+                            .attr("title","Decimal only (0-9)");
+                        $("#startAddressLabel")
+                            .html('Start Address (Dec) (3585) ');
+                        $("#node-input-startType").text("C");
+                        break;
+
+                    case "C32":
+                        // 0-9, label jadi Dec
+                        $("#node-input-start,#node-input-end")
+                            .off("input")
+                            .on("input", function() { this.value = decimalOnly(this.value); })
+                            .attr("placeholder","e.g. 100")
+                            .attr("title","Decimal only (0-9)");
+                        $("#startAddressLabel")
+                            .html('Start Address (Dec) (1793) ');
+                        $("#node-input-startType").text("C");
+                        break;
+
+                    case "D":
+                        // 0-9, label jadi Dec
+                        $("#node-input-start,#node-input-end")
+                            .off("input")
+                            .on("input", function() { this.value = decimalOnly(this.value); })
+                            .attr("placeholder","e.g. 100")
+                            .attr("title","Decimal only (0-9)");
+                        $("#startAddressLabel")
+                            .html('Start Address (Dec) (4097) ');
+                        $("#node-input-startType").text("D");
+                        break;
+                }
+            }
+
+            // on load
+            updateInputFilter();
+
+            // when device changes
+            $("#node-input-device").on("change", updateInputFilter);
+        },
+        label: function() { return this.name||"DELTA-WRITE"; }
+    });
+</script>
